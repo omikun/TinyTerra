@@ -65,7 +65,7 @@ public class VectorD : List<float>
     }
 }
 
-class OrbitUtil 
+class OrbitUtilFloat 
 {
     public static Vector3 rk4(float dt, Vector3 pos, Vector3 vel, Vector3 parentPos, float gm, Vector3 accel)
     {

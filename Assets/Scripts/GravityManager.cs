@@ -8,6 +8,8 @@ public class GravityManager : MonoBehaviour
     gravity[] gravities;
     public float g;
     public bool pause = false;
+    float maxProjectionTime = 30;
+    float standardMaxProjectionTime = 30;
 
     //record all gravities
     void Start()
@@ -48,6 +50,7 @@ public class GravityManager : MonoBehaviour
 
     bool IsSame(gravity a, gravity b )
     {
+        if (a == null || b == null) { return false; }
         return (a.gameObject.GetInstanceID() == b.gameObject.GetInstanceID());
     }
 
@@ -99,6 +102,7 @@ public class GravityManager : MonoBehaviour
         foreach (var a in gravities)
         {
             if (IsSame(notThis, a)) { continue; }
+            if (a.rb.mass < notThis.rb.mass) { continue; }
             var accel = g * a.rb.mass / (position - a.nextPosition).sqrMagnitude;
             if (largestAccel < accel)
             {
@@ -152,15 +156,25 @@ public class GravityManager : MonoBehaviour
         frameCounter += 1;
     }
 
+    [Range(.1f, 2f)]
+    public float updateDt = .2f;
+    [Range(10, 1000)]
+    public int numUpdates = 100;
     public bool useRK4 = false;
+    [Range(.1f, 10f)]
+    public float rk4UpdateDt = .2f;
+    [Range(50, 1000)]
+    public int rk4NumUpdates = 100;
     public void UpdateTrajectories() 
     {
-        float dt = 0.2f;
-        int interval = 100;
+        float dt = updateDt;
+        int interval = numUpdates;
         if (useRK4) {
-            dt = .6f;
-            interval = 50;
+            dt = rk4UpdateDt;
+            interval = rk4NumUpdates;
         }
+        maxProjectionTime = dt * interval;
+        standardMaxProjectionTime = dt * interval;
         //init
         foreach (var grav in gravities)
         {
@@ -170,9 +184,12 @@ public class GravityManager : MonoBehaviour
             grav.nextPositions.Clear();
             grav.nextPositions.Add(grav.transform.position);
             grav.runSimulation = true;
+            grav.simSoiGrav = grav.soiGrav;
+            grav.simPoint = 0;
+            grav.maxProjectionTime = standardMaxProjectionTime;
         }
 
-        for (int i = 0; i < updateInterval * interval; i++)
+        for (int i = 0; i < maxProjectionTime; i++)
         {
             //calculate velocity and position for next iteration
             foreach (var grav in gravities)
@@ -185,10 +202,21 @@ public class GravityManager : MonoBehaviour
             foreach (var grav in gravities)
             {
                 var soi = GetNearestSOIGrav(grav, grav.nextPosition);
+                if (soi && IsSame(soi, grav.simSoiGrav) == false)
+                {
+                    grav.simSoiGrav = soi;
+                    grav.simPoint = dt * i;
+                    LimitToPeriod(grav, i * dt);
+                }
+                if (soi == null)
+                {
+                    soi = grav.soiGrav;
+                }
                 //TODO
                 // print if SOI is not grav.soiGrav
                 //future pos - future soi pos + current soi pos
                 WillCollideWithAny(grav);
+                ShutDown(grav, i * dt);
                 if (grav.runSimulation == false) { continue; }
 
                 grav.nextPositions.Add(grav.nextPosition - soi.nextPosition + soi.transform.position);
@@ -203,6 +231,44 @@ public class GravityManager : MonoBehaviour
         }
     }
 
+    void ShutDown(gravity grav, float t)
+    {
+        if (grav.maxProjectionTime <= t) 
+        {
+            grav.runSimulation = false;
+        }
+    }
+    //if period is too long, stop displaying this thing
+    void LimitToPeriod(gravity grav, float currentTime)
+    {
+        var period = GetPeriod(grav, grav.nextPosition, grav.nextVelocity);
+
+        if (currentTime + period > maxProjectionTime && period < standardMaxProjectionTime)
+        {
+            maxProjectionTime = currentTime + period;
+            grav.maxProjectionTime = maxProjectionTime;
+        }
+    }
+    float GetPeriod(gravity grav, Vector3 pos, Vector3 vel)
+    {
+        var rv = Util.convertToRv(ref pos, ref vel);
+        
+        var gm = g * grav.soiGrav.rb.mass;
+        var oe = Util.rv2oe(gm, rv);
+
+        //find period of gravity around gravwell
+        if (oe.sma < .1f)
+        {
+            return 0;
+        } else {
+            var p = oe.GetPeriod(gm);
+            if (p > maxProjectionTime)
+            {
+                return 0;
+            }
+            return p;
+        }
+    }
     bool WillCollideWithAny(gravity a) {
         foreach (var grav in gravities)
         {
@@ -246,17 +312,13 @@ public class GravityManager : MonoBehaviour
                 continue;
             }
             
-            var towardsGrav = grav.simPosition - bodyA.simPosition;
-            var normalizedTowardGrav = towardsGrav.normalized;
-            var sqradius = towardsGrav.sqrMagnitude;
             if (useRK4) 
             {
                 var gm = g * grav.rb.mass;
-                var v = OrbitUtil.rk4(dt, bodyA.simPosition, bodyA.nextVelocity, grav.simPosition, gm, Vector3.zero);
+                var v = Util.rk4(dt, bodyA.simPosition, bodyA.nextVelocity, grav.simPosition, gm, Vector3.zero);
                 velocity += v - bodyA.nextVelocity;
             } else {
-                var accel = normalizedTowardGrav * g * grav.rb.mass / sqradius;
-                velocity += accel * dt;
+                velocity += CalculateVelocity(dt, bodyA.simPosition, grav.simPosition, grav.rb.mass);
             }
         }
         return velocity;
@@ -273,12 +335,27 @@ public class GravityManager : MonoBehaviour
                 continue;
             }
 
-            var towardsGrav = grav.transform.position - bodyA.transform.position;
-            var normalizedTowardGrav = towardsGrav.normalized;
-            var sqradius = towardsGrav.sqrMagnitude;
-            var accel = normalizedTowardGrav * g * grav.rb.mass / sqradius;
-            velocity += accel * dt;
+            velocity += CalculateVelocity(dt, bodyA.transform.position, grav.transform.position, grav.rb.mass);
         }
         return velocity;
+    }
+
+    Vector3 CalculateVelocity(float dt, Vector3 pos, Vector3 parentPos, float parentMass)
+    {
+        var towardsGrav = parentPos- pos;
+        var normalizedTowardGrav = towardsGrav.normalized;
+        var sqradius = towardsGrav.sqrMagnitude;
+        var accel = normalizedTowardGrav * g * parentMass / sqradius;
+        //different gravitational curves:
+        //1/(1+e^-(-x+6)), from 0 to 12
+        //or
+        //{ ((cos(x*pi/5)+1)/2)^2, x<3 }, 1/x^2 otherwise
+        if (false && sqradius < 9) 
+        {
+            var radius = Mathf.Sqrt(sqradius);
+            accel = normalizedTowardGrav * g * parentMass 
+                * Mathf.Pow( (Mathf.Cos(radius * Mathf.PI / 5) + 1) / 2, 2);
+        }
+        return accel * dt;
     }
 }

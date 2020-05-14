@@ -29,7 +29,7 @@ public class ShipInput : MonoBehaviour
     public float throttle;
 
     // How quickly the throttle reacts to input.
-    private const float THROTTLE_SPEED = 0.1f;
+    private const float THROTTLE_SPEED = 1f;
 
     // Keep a reference to the ship this is attached to just in case.
     private Ship ship;

@@ -6,8 +6,8 @@ using UnityEngine.Assertions;
 
 public class Starfield : MonoBehaviour
 {
-    public int maxStars = 1000000;
-    public float starFieldSize = 100;
+    public int maxStars = 100;
+    public float starFieldSize = 10;
 
     public float starSize = 1f;
     public float starSizeRange = 5f;
@@ -26,10 +26,10 @@ public class Starfield : MonoBehaviour
 
         for (int i = 0; i < maxStars; i++)
         {
-            float randSize = Random.Range(starSizeRange, starSizeRange * 10f);                       // Randomize star size within parameters
+            float randSize = Random.Range(1, starSizeRange );                       // Randomize star size within parameters
             float scaledColor = (true == colorize) ? randSize - starSizeRange : 1f;         // If coloration is desired, color based on size
 
-            stars[i].position = Random.insideUnitSphere * starFieldSize;
+            stars[i].position = Random.insideUnitSphere.normalized * starFieldSize;
             stars[i].startSize = starSize * randSize;
             stars[i].startColor = new Color(1f, scaledColor, scaledColor, 1f);
         }

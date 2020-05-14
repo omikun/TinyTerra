@@ -8,6 +8,9 @@ public class gravity : MonoBehaviour
     public float radius;
     public GameObject soi;
     public gravity soiGrav;
+    public gravity simSoiGrav; //soi grav at simPosition
+    public float simPoint; //time at which simSoiGrav changes
+    public float maxProjectionTime;
     public Vector3 velocity;
     public Vector3 nextVelocity = new Vector3(1, 0 , 0);
     public Vector3 nextPosition;

@@ -5,7 +5,7 @@ using UnityEngine;
 public class TimeManager : MonoBehaviour
 {
     private float fixedDeltaTime;
-    [Range(.1f, 1.0f)]
+    [Range(.5f, 3.0f)]
     public float timeScale = 1.0f;
     // Start is called before the first frame update
     void Start()
@@ -16,7 +16,7 @@ public class TimeManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        Time.timeScale = timeScale;
+        Time.timeScale = timeScale*timeScale;
         Time.fixedDeltaTime = this.fixedDeltaTime * Time.timeScale;
     }
 }
