@@ -27,7 +27,19 @@ public class Ship : MonoBehaviour
     public bool UsingMouseInput { get { return input.useMouseInput; } }
     public Vector3 Velocity { get { return physics.Rigidbody.velocity; } }
     public float Throttle { get { return input.throttle; } }
+    public GameObject shipModel;
+    public float inGameScale = 80;
 
+    //get size, then get scale, to display the appropriate velocity
+    Vector3 GetSize()
+    {
+        var b = new Bounds(shipModel.transform.position, Vector3.zero);
+        foreach (var r in gameObject.GetComponentsInChildren<Renderer>())
+        {
+            b.Encapsulate(r.bounds);
+        }
+        return b.size;
+    }
     private void Awake()
     {
         input = GetComponent<ShipInput>();

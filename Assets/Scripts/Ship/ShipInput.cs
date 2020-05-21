@@ -91,7 +91,7 @@ public class ShipInput : MonoBehaviour
         else if (Input.GetKey(decreaseKey))
             target = -1.0f;
 
-        throttle = Mathf.MoveTowards(throttle, target, Time.deltaTime * THROTTLE_SPEED);
+        throttle = target;//Mathf.MoveTowards(throttle, target, Time.deltaTime * THROTTLE_SPEED);
     }
 
     /// <summary>

@@ -18,14 +18,14 @@ public class LagCamera : MonoBehaviour
     [Tooltip("If the parented object is using FixedUpdate for movement, check this box for smoother movement.")]
     public bool usedFixedUpdate = true;
 
-    private Transform target;
+    private Transform parent;
     private Vector3 startOffset;
 
     private void Start()
     {
-        target = transform.parent;
+        parent = transform.parent;
 
-        if (target == null)
+        if (parent == null)
             Debug.LogWarning(name + ": Lag Camera will not function correctly without a target.");
         if (transform.parent == null)
             Debug.LogWarning(name + ": Lag Camera will not function correctly without a parent to derive the initial offset from.");
@@ -48,10 +48,10 @@ public class LagCamera : MonoBehaviour
 
     private void UpdateCamera()
     {
-        if (target != null)
+        if (parent != null)
         {
-            transform.position = target.TransformPoint(startOffset);
-            transform.rotation = Quaternion.Slerp(transform.rotation, target.rotation, rotateSpeed * Time.deltaTime);
+            transform.position = parent.TransformPoint(startOffset);
+            transform.rotation = Quaternion.Slerp(transform.rotation, parent.rotation, rotateSpeed * Time.deltaTime);
         }
     }
 }

@@ -14,6 +14,7 @@ private Vector3 target = new Vector3(5.0f, 0.0f, 0.0f);
     // Update is called once per frame
     void Update()
     {
-        transform.RotateAround(transform.position, Vector3.up, speed * Time.deltaTime);
+        //transform.RotateAround(transform.position, Vector3.up, speed * Time.deltaTime);
+        transform.Rotate(Vector3.up * speed * Time.deltaTime, Space.Self);
     }
 }

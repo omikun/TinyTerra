@@ -8,8 +8,8 @@ public class GravityManager : MonoBehaviour
     gravity[] gravities;
     public float g;
     public bool pause = false;
-    float maxProjectionTime = 30;
-    float standardMaxProjectionTime = 30;
+    float maxProjectionTime = 300;
+    float standardMaxProjectionTime = 300;
 
     //record all gravities
     void Start()
@@ -35,7 +35,8 @@ public class GravityManager : MonoBehaviour
             var oldV = grav.rb.velocity;
             var v = velVector.normalized * speed;
             grav.rb.velocity = v;
-            print (grav.gameObject.name + "->" + grav.soiGrav.gameObject.name + " old v: " + oldV.ToString() + " new v: " + grav.rb.velocity.ToString());
+            print (grav.gameObject.name + " old v: " + oldV.ToString());
+            print (grav.gameObject.name + "->" + grav.soiGrav.gameObject.name + " new v: " + grav.rb.velocity.ToString());
             //print ("toSOI: " + toSOI.ToString() + " velVector: " + velVector.ToString() + "velV.norm: " + velVector.normalized.ToString() + " speed: " + speed.ToString());
         }
         //find chain of soigravs
@@ -43,8 +44,23 @@ public class GravityManager : MonoBehaviour
         foreach (var grav in gravities)
         {
             if (IsSame(grav, grav.soiGrav)) { continue; }
-            grav.rb.velocity += grav.soiGrav.rb.velocity;
-            print(grav.gameObject.name + " v: " + grav.rb.velocity.ToString());
+            grav.nextVelocity = Vector3.zero;
+            var tempGrav = grav;
+            print ("Adding for " + tempGrav.gameObject.name);
+            while (!IsSame(tempGrav, tempGrav.soiGrav))
+            {
+                grav.nextVelocity += tempGrav.soiGrav.rb.velocity;
+                //print("\t+: " + tempGrav.soiGrav.gameObject.name + " v: " + tempGrav.soiGrav.nextVelocity.ToString());
+                tempGrav = tempGrav.soiGrav;
+            }
+            //grav.rb.velocity += grav.soiGrav.rb.velocity;
+            //print(grav.gameObject.name + " v: " + grav.rb.velocity.ToString());
+        }
+        
+        foreach (var grav in gravities)
+        {
+            grav.rb.velocity += grav.nextVelocity;
+            print (grav.gameObject.name + "->" + grav.soiGrav.gameObject.name + " new v: " + grav.rb.velocity.ToString());
         }
     }
 
@@ -131,7 +147,7 @@ public class GravityManager : MonoBehaviour
         return dist * Mathf.Pow(minM, 2/5f);
     }
 
-    int updateInterval = 1;
+    int updateInterval = 80;
     int frameCounter = 0;
     // Update is called once per frame
     void Update()
@@ -151,8 +167,12 @@ public class GravityManager : MonoBehaviour
         if (frameCounter % updateInterval == 0) 
         {
             frameCounter = 0;
-            UpdateTrajectories();
+            foreach (var grav in gravities)
+            {
+                print(grav.gameObject.name + "->" + grav.soiGrav.gameObject.name + " new v: " + grav.rb.velocity.magnitude.ToString());
+            }
         }
+            UpdateTrajectories();
         frameCounter += 1;
     }
 

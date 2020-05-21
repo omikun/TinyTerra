@@ -26,7 +26,7 @@ public class gravity : MonoBehaviour
         AddLineRenderer();
         soiGrav = soi.GetComponent<gravity>();
         rb = GetComponent<Rigidbody>();
-        rb.velocity = velocity;
+        //rb.velocity = velocity;
 
         var planet = GetComponent<Planet>();
         if (planet) {
